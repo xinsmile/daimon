@@ -1,228 +1,230 @@
-# deepseek-harness
+# daimon
 
-> 可扩展的**免费大模型服务**接入框架 —— **Everything is a Plugin**。
-> 通用免费模型插件系统 + Agnes 多模态免费服务接入 + 多 Key 额度耗尽自动轮转。
-
-本项目**架构上基于并致敬** [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（深度求索官方的 TypeScript 仓库，标语即 “Everything is a Plugin”）。
-鉴于官方仓库是一个 279MB 的 pnpm 多包 monorepo（agent / llm / mcp ……），本项目取其**插件化内核思想**，做成一个**聚焦、自包含、零构建即可运行**的 TypeScript 实现，专门解决三件事：
-
-1. **通用免费模型插件**：其它免费服务接入只需极少改动，覆盖 文本 / 图像 / 音频 / 视频 / 多模态。
-2. **接入 Agnes 免费模型**：`https://www.agnes-ai.cn/zh-Hans/docs/overview`（OpenAI 兼容，`https://api.agnes-ai.cn/v1`）。
-3. **多 Key 自动轮转**：配置多个 key，免费额度用完自动切换到下一个，限流自动冷却。
+> 一个**个人 Agent** —— 基于 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 同源的 **cordis** 插件内核，**Everything is a Plugin**。
+> 「免费多模型接入 + 多 Key 额度耗尽自动轮转」是它的**能力之一**，此外还有工具、记忆、会话。
 
 ---
 
-## ✨ 特性
+## 🎯 这是什么
 
-- **插件即一切**：`Provider` 是一个 `Plugin`，能力（Capability）按模态拆分，注册即可用。
-- **极低接入成本**：新免费服务只需继承 `OpenAICompatiblePlugin`（白嫖文本/图像）或 `BasePlugin`（自定义模态），**零 HTTP 样板代码**。
-- **多 Key 轮转**：`KeyManager` 自动在多个 key 间轮换，额度耗尽→标记失效换下一个；限流→冷却后恢复；连续失败超限→失效。
-- **多模态**：文本、图像、音频（TTS）、视频（提交+轮询）、多模态（图文对话）开箱支持。
-- **安全**：密钥只走环境变量 / 本地文件，状态持久化**只存 key 哈希，绝不存明文**。
-- **零强制依赖**：核心仅依赖 Node 原生 `fetch` + `yaml`；`edge-tts` 为可选依赖。
+`daimon` 是一个**个人 Agent 框架**，不是单纯的模型接入库。它借鉴 deepseek-harness 的架构：
+用 [cordis](https://github.com/cordiverse/cordis)（deepseek-harness 的插件内核，v4）管理**能力**，
+每个能力都是一个可插拔的 `Service`，通过 `ctx.model` / `ctx.tools` 互相注入。
+
+```
+                    ┌─────────────────────────┐
+                    │   cordis Context (ctx)  │  ← 插件内核（来自 deepseek-harness 同源）
+                    └───────────┬─────────────┘
+                                │ ctx.plugin(Service)
+        ┌───────────┬───────────┼───────────┬────────────┐
+        ▼           ▼           ▼           ▼            ▼
+    ┌────────┐ ┌────────┐ ┌──────────┐ ┌──────────┐
+    │ model  │ │ tools  │ │  memory  │ │ session  │        ← 四大能力（可插拔）
+    │ 模型接入│ │ 工具调用│ │  记忆    │ │  会话    │
+    └───┬────┘ └────────┘ └──────────┘ └──────────┘
+        │                        ▲
+        │  ┌─────────────────────┘
+        │  │ 组合
+        ▼  ▼
+   ┌────────────┐
+   │   Agent    │  对话循环：记忆召回 → 组上下文 → 生成 → 工具回灌
+   └────────────┘
+```
+
+**两层插件结构**（与 deepseek-harness 一致）：
+- **外层（cordis）**：管「能力」—— model / tools / memory / session
+- **内层（model 能力内部）**：管「模型 provider」—— agnes / openai-compatible / edge-tts
+
+---
+
+## ✨ 能力一览
+
+| 能力 | 服务名 | 作用 |
+|---|---|---|
+| **model** | `ctx.model` | 免费模型接入 + 多 Key 轮转（文本/图像/音频/视频/多模态） |
+| **tools** | `ctx.tools` | 工具注册与调用，支持 `ctx.effect()` 卸载时自动注销 |
+| **memory** | `ctx.memory` | 长期记忆，本地 JSON 持久化 + 关键词召回 |
+| **session** | `ctx.session` | 多轮会话持久化，支持断点续聊 |
+| **Agent** | — | 组合上述能力，`chat()` 完成一次对话（含工具回灌循环） |
+
+### model 能力（内建 provider）
+
+- **通用免费模型插件**：新服务继承 `OpenAICompatiblePlugin` 即可，**零 HTTP 样板代码**
+- **Agnes**：`https://api.agnes-ai.cn/v1`（OpenAI 兼容），覆盖文本/图像/视频/音频/多模态
+- **edge-tts**：零密钥免费 TTS，演示极简接入
+- **多 Key 自动轮转**：额度耗尽→换下一个；限流→冷却后恢复；连续失败超限→失效
+- **安全**：密钥只走环境变量，状态持久化**只存 key 的 SHA-256 哈希，绝不存明文**
 
 ---
 
 ## 📁 目录结构
 
 ```
-deepseek-harness/
-├── package.json            # 依赖与脚本（dev/test/build）
-├── tsconfig.json           # TS 配置（NodeNext，.js 扩展名导入）
-├── config.example.yaml     # 配置示例（不写密钥，只写 apiKeyEnv 变量名）
-├── .gitignore
+daimon/
+├── package.json / tsconfig.json / .gitignore
+├── config.example.yaml
 ├── src/
-│   ├── index.ts            # 公共导出入口
-│   ├── config.ts           # ProviderConfig / HarnessConfig（YAML/JSON + 环境变量）
-│   ├── cli.ts              # 命令行（list-providers / key-status / run）
-│   ├── core/
-│   │   ├── types.ts        # Modality、KeyState、parseModality
-│   │   ├── errors.ts       # 异常体系（QuotaExhausted / RateLimited / NoHealthyKey …）
-│   │   ├── results.ts      # 结果对象（TextResult / ImageResult / AudioResult / VideoResult …）
-│   │   ├── http.ts         # 原生 fetch 封装 + 异常分类 + 超时
-│   │   ├── keyManager.ts   # ★ 多 Key 轮转核心（额度检测/冷却/持久化）
-│   │   ├── plugin.ts       # ★ 插件基类 / Capability / 注册表 / 带轮转的 request
-│   │   └── harness.ts      # 编排器：加载配置 → 装配插件 → 路由请求
-│   └── plugins/
-│       ├── index.ts        # 注册入口（副作用导入触发 register）
-│       ├── openaiCompatible.ts  # 通用 OpenAI 兼容基类（文本/图像）
-│       ├── agnes.ts        # Agnes 插件（文本/图像/视频/音频/多模态）
-│       └── edgeTts.ts      # edge-tts 免费 TTS（零密钥，演示极简接入）
-├── examples/
-│   └── basicUsage.ts       # 编程式用法示例
-└── tests/                  # 单元测试（node:test，mock fetch）
+│   ├── kernel.ts               # ★ 用 cordis 装配四大能力，返回 Agent
+│   ├── agent/                  # ★ 执行主体（对话循环 + 工具回灌）
+│   ├── capabilities/
+│   │   ├── model/              # ★ 能力一：模型接入（原有完整实现）
+│   │   │   ├── service.ts      #   ModelService（包装成 cordis Service）
+│   │   │   ├── keyManager.ts   #   多 Key 轮转核心
+│   │   │   ├── plugin.ts       #   provider 插件基类 / Capability / 注册表
+│   │   │   ├── harness.ts      #   编排器
+│   │   │   ├── config.ts / types.ts / errors.ts / results.ts / http.ts
+│   │   │   └── providers/      #   openaiCompatible / agnes / edgeTts
+│   │   ├── tools/              # 能力二：工具
+│   │   ├── memory/             # 能力三：记忆
+│   │   └── session/            # 能力四：会话
+│   ├── cli.ts                  # CLI（list-providers / key-status / run / chat）
+│   └── index.ts                # 公共导出
+├── examples/basicUsage.ts
+└── tests/                      # 25 个用例（node:test）
     ├── keyManager.test.ts
     ├── registry.test.ts
-    └── agnes.test.ts
+    ├── agnes.test.ts
+    └── kernel.test.ts          # 内核装配 + 四大能力 + Agent
 ```
-
----
-
-## 🧩 核心模块设计
-
-### 1. 插件系统（`core/plugin.ts`）——“Everything is a Plugin”
-
-```
-                ┌──────────────┐
-   provider ──▶ │   Harness    │  加载配置 + 装配插件 + 路由
-                └──────┬───────┘
-                       │ buildPlugin(name, config)
-                ┌──────▼───────┐
-                │  BasePlugin  │  ◀── 所有 provider 的基类
-                │ - keys(KeyManager)
-                │ - request() 带密钥轮转
-                │ - makeCapability(modality)
-                └──────┬───────┘
-          ┌────────────┼─────────────┐
-          ▼            ▼             ▼
-   OpenAICompatible  AgnesPlugin   EdgeTTSPlugin
-   (文本/图像)        (多模态)      (零密钥 TTS)
-          │            │
-          └── Agnes 继承 OpenAICompatible（文本/图像零代码复用）
-```
-
-- **`Capability`**：单模态执行单元（`generate(prompt, opts)`）。
-- **`BasePlugin`**：持有 `KeyManager` 与 `request()`（自动跨 key 重试）；`makeCapability(modality)` 返回对应能力。
-- **`register(name, Ctor)`** + `REGISTRY`：插件在模块底部注册，导入即生效。
-
-### 2. 多 Key 轮转（`core/keyManager.ts`）—— 需求 3
-
-`KeyManager` 管理同一 provider 的多个 key，状态机：
-
-```
-        ┌──────────┐  QuotaExhausted  ┌────────────┐
-        │ ACTIVE   │ ───────────────▶ │ EXHAUSTED  │  (额度用尽，永久失效，轮换下一个)
-        └────┬─────┘                   └────────────┘
-             │ RateLimited / 冷却到期
-             ▼
-        ┌──────────┐  冷却到期自动  ┌──────────┐
-        │ COOLDOWN │ ────────────▶ │ ACTIVE   │
-        └──────────┘               └──────────┘
-```
-
-- **额度耗尽**（`QuotaExhausted`，HTTP 402/429 + quota/额度 字样）→ 标记 `EXHAUSTED`，换下一个 key。
-- **限流**（`RateLimited`）→ 进入 `COOLDOWN`，`cooldown_seconds` 后自动恢复。
-- **其它失败** → 累计次数，达到 `max_failures` 判定失效，避免死循环刷坏 key。
-- **持久化**：key 状态写入 `state_file`，且仅存 **SHA-256 哈希索引**，不存明文。
-- **可观测**：`harness key-status` 查看每个 key 的状态/冷却剩余。
-
-`BasePlugin.request()` 在此基础上实现自动重试：
-
-```
-请求 → acquire(key) → 成功: reportSuccess
-                   → QuotaExhausted: reportQuota, 换下一个 key
-                   → RateLimited: 冷却, 换下一个 key
-                   → 其它错误: reportFailure, 换下一个 key
-     全部 key 不可用 → 抛出最后一个错误 / NoHealthyKey
-```
-
-### 3. HTTP 层（`core/http.ts`）
-
-基于 Node 原生 `fetch`，统一超时（AbortController）与异常分类：4xx/5xx → `ProviderError`，402/429+额度字样 → `QuotaExhausted`，其它 429 → `RateLimited`。便于测试中整体 mock（替换 `globalThis.fetch`）。
-
-### 4. Agnes 插件（`plugins/agnes.ts`）—— 需求 2
-
-- **Base URL**：`https://api.agnes-ai.cn/v1`，认证 `Authorization: Bearer <key>`，OpenAI 兼容。
-- **文本 / 图像**：直接继承 `OpenAICompatiblePlugin`，**零重复代码**。
-- **视频**：异步「提交 + 轮询」（免费模型 `agnes-video-new-flash`）。
-- **音频**：TTS（`/audio/speech`，OpenAI 风格）。
-- **多模态**：图文混合对话（vision chat）。
-- 视频/音频的**端点与字段抽到 `config.extra`**，改配置即可，无需改代码。
-
-> ⚠️ **需按目标版本核实**：Agnes 文档站当前仅公开 overview，视频/音频的**具体端点路径与响应字段**以 Agnes 控制台 / 官方文档为准。免费模型名已按既有项目经验预填（`agnes-image` / `agnes-video-new-flash` / 等），请以控制台实际免费模型名为准。
 
 ---
 
 ## 🚀 快速开始
 
-### 安装
-
 ```bash
-git clone <your-repo>/deepseek-harness
-cd deepseek-harness
 npm install
-```
-
-### 配置
-
-```bash
 cp config.example.yaml config.yaml
-export AGNES_API_KEYS="key1,key2,key3"   # 多个 key 逗号分隔，额度用完自动轮换
+export AGNES_API_KEYS="key1,key2,key3"   # 多 key 逗号分隔，额度用完自动轮换
 ```
 
-### CLI
+### 作为 Agent 使用
 
 ```bash
-# 列出已注册插件与已启用 provider 及其模态
-npx tsx src/cli.ts --config config.yaml list-providers
+# 单轮对话
+npx tsx src/cli.ts --config config.yaml chat --prompt "你好"
 
-# 查看 key 轮转状态
-npx tsx src/cli.ts --config config.yaml key-status --provider agnes
-
-# 发起一次生成（文本 / 图像 / 音频 / 视频 / 多模态）
-npx tsx src/cli.ts --config config.yaml run --provider agnes --modality text --prompt "用一句话介绍量子纠缠"
-npx tsx src/cli.ts --config config.yaml run --provider agnes --modality video --prompt "一只猫在跑步" --output cat.mp4
-npx tsx src/cli.ts --config config.yaml run --provider edge-tts --modality audio --prompt "你好，这是测试" --output hi.mp3
+# 交互模式
+npx tsx src/cli.ts --config config.yaml chat
 ```
 
-> 也可用编译后的入口：`npm run build` 后 `node dist/cli.js ...`。
+### 作为模型接入使用
 
-### 编程式
-
-```ts
-import { Harness, ProviderConfig, HarnessConfig } from "deepseek-harness";
-import "deepseek-harness/dist/plugins/index.js";
-
-const harness = new Harness(new HarnessConfig({
-  defaultProvider: "agnes",
-  providers: {
-    agnes: new ProviderConfig({
-      name: "agnes",
-      baseUrl: "https://api.agnes-ai.cn/v1",
-      apiKeyEnv: "AGNES_API_KEYS",
-      defaultModels: { text: "agnes-text-free", image: "agnes-image", video: "agnes-video-new-flash" },
-    }),
-  },
-}));
-
-const text = await harness.generate("agnes", "text", "你好");
-console.log(text.text);
+```bash
+npx tsx src/cli.ts --config config.yaml list-providers
+npx tsx src/cli.ts --config config.yaml key-status --provider agnes
+npx tsx src/cli.ts --config config.yaml run --provider agnes --modality text --prompt "介绍量子纠缠"
 ```
 
 ---
 
-## ➕ 如何新增一个免费服务（需求 1 的落地）
-
-绝大多数免费服务是 OpenAI 兼容的。新增一个**只需几行**：
+## 🧩 编程式用法
 
 ```ts
-import { OpenAICompatiblePlugin, register, type PluginCtor } from "deepseek-harness";
+import { createKernel, ToolsService } from "daimon";
+
+const { ctx, agent, stop } = await createKernel({
+  model: {
+    providers: {
+      agnes: {
+        baseUrl: "https://api.agnes-ai.cn/v1",
+        apiKeyEnv: "AGNES_API_KEYS",
+        defaultModels: { text: "agnes-text-free", video: "agnes-video-new-flash" },
+      },
+    },
+  },
+  dataDir: "./.daimon",
+});
+
+// 注册一个工具（返回注销函数，可交给 ctx.effect 托管）
+ctx.tools.register({
+  name: "add",
+  description: "两数相加",
+  handler: (args: any) => args.a + args.b,
+});
+
+// 对话（自动：召回记忆 → 组上下文 → 生成 → 工具回灌 → 写入会话）
+const reply = await agent.chat("帮我算一下 2+3");
+console.log(reply);
+
+await stop();
+```
+
+也可只用模型能力：
+
+```ts
+import { Harness, HarnessConfig, ProviderConfig } from "daimon";
+
+const harness = new Harness(
+  new HarnessConfig({
+    defaultProvider: "agnes",
+    providers: {
+      agnes: new ProviderConfig({
+        name: "agnes",
+        baseUrl: "https://api.agnes-ai.cn/v1",
+        apiKeyEnv: "AGNES_API_KEYS",
+      }),
+    },
+  }),
+);
+const r = await harness.generate("agnes", "text", "你好");
+console.log(r.text);
+```
+
+---
+
+## ➕ 扩展
+
+### 新增一个免费模型服务
+
+```ts
+import { OpenAICompatiblePlugin, register, type PluginCtor } from "daimon";
 
 class MyFreePlugin extends OpenAICompatiblePlugin {
   name = "myfree";
   description = "某免费服务（OpenAI 兼容）";
-  modalities = ["text", "image"] as const as any; // 直接复用文本/图像能力
+  modalities = ["text", "image"] as any;
 }
 register("myfree", MyFreePlugin as unknown as PluginCtor);
 ```
 
-若还需视频/音频等差异模态，覆写 `makeCapability(modality)` 返回你的 `Capability` 即可——密钥轮转、HTTP、错误处理全部复用，**无需重写一行基础设施代码**。`edgeTts.ts` 即是「零密钥免费服务极简接入」的范例。
+密钥轮转、HTTP、错误处理全部复用。差异模态（视频/音频）覆写 `makeCapability()` 即可。
+
+### 新增一个能力
+
+写一个 `extends Service` 的类，在 `kernel.ts` 里 `ctx.plugin(YourService)`，即可通过 `ctx.yourService` 被 Agent 或其它能力注入使用。
 
 ---
 
-## ✅ 测试与验证
+## ⚙️ 关键实现说明
+
+- **插件内核**：[cordis](https://github.com/cordiverse/cordis) v4（`4.0.0-rc.10`），与 deepseek-harness 同源。
+  `ctx.plugin()` 返回 `Fiber`（可 await / dispose），能力通过 `inject` 声明依赖。
+- **工具调用协议**：采用轻量 JSON 指令（模型回复中输出 `{"tool":"名","args":{...}}`），
+  不依赖 provider 的 function-calling，兼容免费模型。
+- **tsconfig 解析模式**：`moduleResolution: "Bundler"`。原因是 cordis 的类型声明使用无扩展名相对导入，
+  在 `NodeNext` 下会触发 TS2834 并被 `skipLibCheck` 静默吞掉，导致 `Context`/`Service` 解析不出导出成员。
+
+---
+
+## ✅ 测试
 
 ```bash
 npm test
 ```
 
-- `keyManager.test.ts`：轮转、额度耗尽、限流冷却、连续失败失效、round-robin、持久化不泄露明文、reset。
-- `registry.test.ts`：插件注册、能力装配与路由、不支持模态报错。
-- `agnes.test.ts`：文本/多模态解析、视频直出与提交+轮询、音频字节、额度耗尽自动轮换、全部 key 耗尽抛错（均 mock `fetch`，无需真实 key）。
+- `keyManager.test.ts`：轮转、额度耗尽、限流冷却、连续失败失效、持久化不泄露明文
+- `registry.test.ts`：provider 注册、能力路由、不支持模态报错
+- `agnes.test.ts`：文本/多模态/视频/音频解析、额度耗尽自动轮换（mock `fetch`）
+- `kernel.test.ts`：cordis 内核装配、tools/memory/session、Agent 对话与工具回灌
 
-当前状态：**18/18 全部通过**，`tsc --noEmit` 类型检查通过，`npm run build` 可产出 `dist`。
+当前状态：**25/25 全部通过**，`tsc --noEmit` 通过，`npm run build` 产出 `dist`。
 
 ---
+
+## 🙏 致谢
+
+架构与插件内核基于并致敬 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
+（"Everything is a Plugin"）。本项目取其插件化内核思想，做成聚焦、自包含的个人 Agent 实现。
 
 ## 📄 许可证
 
