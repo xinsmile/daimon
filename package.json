@@ -1,34 +1,48 @@
 {
-  "name": "deepseek-harness",
+  "name": "daimon",
   "version": "0.1.0",
-  "description": "可扩展的免费大模型服务接入框架：Everything is a Plugin —— 通用免费模型插件 + Agnes 多模态接入 + 多 Key 额度耗尽自动轮转。架构借鉴 deepseek-ai/deepseek-harness。",
+  "description": "个人 Agent（基于 deepseek-harness 同源的 cordis 插件内核）：Everything is a Plugin —— 模型接入/工具/记忆/会话皆为可插拔能力，内置免费多模型接入 + 多 Key 额度耗尽自动轮转。",
   "type": "module",
   "license": "MIT",
   "bin": {
-    "deepseek-harness": "dist/cli.js"
+    "daimon": "dist/cli.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist", "config.example.yaml", "README.md"],
+  "files": [
+    "dist",
+    "config.example.yaml",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx src/cli.ts",
     "start": "tsx src/cli.ts",
-    "test": "node --import tsx --test tests/keyManager.test.ts tests/registry.test.ts tests/agnes.test.ts",
+    "test": "node --import tsx --test tests/keyManager.test.ts tests/registry.test.ts tests/agnes.test.ts tests/kernel.test.ts",
     "example": "tsx examples/basicUsage.ts"
   },
-  "keywords": ["llm", "free-model", "plugin", "agnes", "deepseek", "multimodal", "key-rotation", "harness"],
+  "keywords": [
+    "llm",
+    "free-model",
+    "plugin",
+    "agnes",
+    "deepseek",
+    "multimodal",
+    "key-rotation",
+    "harness"
+  ],
   "dependencies": {
+    "cordis": "^4.0.0-rc.10",
     "yaml": "^2.4.0"
   },
   "optionalDependencies": {
     "edge-tts": "^6.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0",
     "tsx": "^4.16.0",
-    "@types/node": "^20.0.0"
+    "typescript": "^5.4.0"
   },
   "engines": {
     "node": ">=18.18"
