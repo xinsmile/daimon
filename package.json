@@ -1,0 +1,36 @@
+{
+  "name": "deepseek-harness",
+  "version": "0.1.0",
+  "description": "可扩展的免费大模型服务接入框架：Everything is a Plugin —— 通用免费模型插件 + Agnes 多模态接入 + 多 Key 额度耗尽自动轮转。架构借鉴 deepseek-ai/deepseek-harness。",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "deepseek-harness": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "config.example.yaml", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/cli.ts",
+    "start": "tsx src/cli.ts",
+    "test": "node --import tsx --test tests/keyManager.test.ts tests/registry.test.ts tests/agnes.test.ts",
+    "example": "tsx examples/basicUsage.ts"
+  },
+  "keywords": ["llm", "free-model", "plugin", "agnes", "deepseek", "multimodal", "key-rotation", "harness"],
+  "dependencies": {
+    "yaml": "^2.4.0"
+  },
+  "optionalDependencies": {
+    "edge-tts": "^6.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "tsx": "^4.16.0",
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}

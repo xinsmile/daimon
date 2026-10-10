@@ -1,0 +1,21 @@
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# 密钥与本地配置（务必忽略，避免泄露）
+config.yaml
+.env
+*.key
+
+# 运行产物
+*.mp3
+*.mp4
+*.png
+*.jpg
+key_state*.json
+
+# 编辑器/系统
+.idea/
+.vscode/
+.DS_Store
