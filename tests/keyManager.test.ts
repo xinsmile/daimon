@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { KeyManager } from "../src/core/keyManager.js";
-import { NoHealthyKey } from "../src/core/errors.js";
+import { KeyManager } from "../src/capabilities/model/keyManager.js";
+import { NoHealthyKey } from "../src/capabilities/model/errors.js";
 
 test("acquire 返回首个可用 key", () => {
   const km = new KeyManager(["k1", "k2"]);
