@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CapabilityNotSupported, PluginNotFoundError } from "../src/core/errors.js";
-import { ProviderConfig } from "../src/config.js";
-import { buildPlugin, getPluginClass, listPlugins } from "../src/core/plugin.js";
-import "../src/plugins/index.js";
+import { CapabilityNotSupported, PluginNotFoundError } from "../src/capabilities/model/errors.js";
+import { ProviderConfig } from "../src/capabilities/model/config.js";
+import { buildPlugin, getPluginClass, listPlugins } from "../src/capabilities/model/plugin.js";
+import "../src/capabilities/model/providers/index.js";
 
 test("内置插件已注册", () => {
   const names = listPlugins();
