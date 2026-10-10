@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { QuotaExhausted } from "../src/core/errors.js";
-import { ProviderConfig } from "../src/config.js";
-import { buildPlugin } from "../src/core/plugin.js";
-import type { BasePlugin } from "../src/core/plugin.js";
-import "../src/plugins/index.js";
+import { QuotaExhausted } from "../src/capabilities/model/errors.js";
+import { ProviderConfig } from "../src/capabilities/model/config.js";
+import { buildPlugin } from "../src/capabilities/model/plugin.js";
+import type { BasePlugin } from "../src/capabilities/model/plugin.js";
+import "../src/capabilities/model/providers/index.js";
 
 function jsonResponse(data: any, status = 200): Response {
   return new Response(JSON.stringify(data), {
