@@ -11,10 +11,12 @@
 
 import { existsSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { Harness } from "./core/harness.js";
-import { listPlugins } from "./core/plugin.js";
-import { HarnessConfig } from "./config.js";
-import "./plugins/index.js";
+import { Harness } from "./capabilities/model/harness.js";
+import { listPlugins } from "./capabilities/model/plugin.js";
+import { HarnessConfig } from "./capabilities/model/config.js";
+import "./capabilities/model/providers/index.js";
+import { createKernel } from "./kernel.js";
+import { createInterface } from "node:readline/promises";
 
 function buildHarness(needConfig: boolean, configPath?: string): Harness | null {
   if (configPath) return Harness.fromFile(configPath);
@@ -78,6 +80,39 @@ async function cmdRun(harness: Harness, values: Record<string, any>): Promise<vo
   }
 }
 
+/**
+ * chat：启动 Agent（model + tools + memory + session 全装配）。
+ * 带 --prompt 时单轮；否则进入交互 REPL。
+ */
+async function cmdChat(
+  configPath: string | undefined,
+  values: Record<string, any>,
+  positional: string[],
+): Promise<void> {
+  const { agent, stop } = await createKernel({
+    model: configPath ? { configFile: configPath } : {},
+    dataDir: process.cwd(),
+  });
+  try {
+    const oneShot = values.prompt ?? (positional.length ? positional.join(" ") : "");
+    if (oneShot) {
+      console.log(await agent.chat(oneShot, { provider: values.provider }));
+      return;
+    }
+    console.log("daimon 交互模式（输入 exit 退出）");
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    for (;;) {
+      const line = (await rl.question("你> ")).trim();
+      if (!line) continue;
+      if (line === "exit" || line === "quit") break;
+      console.log(`daimon> ${await agent.chat(line)}`);
+    }
+    rl.close();
+  } finally {
+    await stop();
+  }
+}
+
 function extractGlobal(argv: string[]): { config?: string; rest: string[] } {
   const rest: string[] = [];
   let config: string | undefined;
@@ -131,9 +166,21 @@ export async function main(argv: string[]): Promise<number> {
     await cmdRun(harness, values as Record<string, any>);
     return 0;
   }
+  if (command === "chat") {
+    const { values, positionals } = parseArgs({
+      args: sub,
+      options: {
+        prompt: { type: "string" },
+        provider: { type: "string" },
+      },
+      allowPositionals: true,
+    });
+    await cmdChat(config, values as Record<string, any>, positionals);
+    return 0;
+  }
 
   console.error(
-    `未知或缺失子命令: ${command ?? "(无)"}\n用法: deepseek-harness [--config path] <list-providers|key-status|run> ...`,
+    `未知或缺失子命令: ${command ?? "(无)"}\n用法: daimon [--config path] <list-providers|key-status|run|chat> ...`,
   );
   return 2;
 }
