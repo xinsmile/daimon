@@ -15,6 +15,11 @@ config.yaml
 *.jpg
 key_state*.json
 
+# Agent 运行时数据（记忆 / 会话落盘）
+.daimon/
+memory.json
+session.json
+
 # 编辑器/系统
 .idea/
 .vscode/
