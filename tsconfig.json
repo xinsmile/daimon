@@ -1,8 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    // cordis 的类型声明使用无扩展名相对导入（export * from './context'），
+    // 在 NodeNext 下会触发 TS2834 并被 skipLibCheck 静默吞掉，导致 Context/Service
+    // 解析不出导出成员。改用 Bundler 解析（仅影响类型检查，运行时不变）。
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
