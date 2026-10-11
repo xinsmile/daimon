@@ -49,11 +49,34 @@
 
 ### model 能力（内建 provider）
 
-- **通用免费模型插件**：新服务继承 `OpenAICompatiblePlugin` 即可，**零 HTTP 样板代码**
+- **通用免费模型插件**：新服务继承 `OpenAICompatiblePlugin` 即可，**零 HTTP 样板代码**；通过 `plugin` 字段，智谱/硅基流动/OpenRouter/Groq/Gemini/千帆/百炼等 OpenAI 兼容服务**零代码接入**
 - **Agnes**：`https://api.agnes-ai.cn/v1`（OpenAI 兼容），覆盖文本/图像/视频/音频/多模态
+- **Pollinations.AI**：`https://pollinations.ai`（全模态、**完全免费、无需 API Key**），文本/图像/音频/视频
 - **edge-tts**：零密钥免费 TTS，演示极简接入
 - **多 Key 自动轮转**：额度耗尽→换下一个；限流→冷却后恢复；连续失败超限→失效
 - **安全**：密钥只走环境变量，状态持久化**只存 key 的 SHA-256 哈希，绝不存明文**
+
+#### 已支持免费模型 Provider
+
+| Provider | 类型 | 模态 | 密钥环境变量 | 备注 |
+|---|---|---|---|---|
+| **pollinations** | 原生插件 | text / image / audio / video | 无需 | 完全免费、零密钥，已设为默认 provider |
+| **agnes** | 原生插件（OpenAI 兼容） | text / image / video / audio / multimodal | `AGNES_API_KEYS` | 多模态免费服务 |
+| **zhipu**（智谱 GLM） | `openai-compatible` | text / image | `ZHIPU_API_KEYS` | `base_url: open.bigmodel.cn/api/paas/v4/` |
+| **siliconflow**（硅基流动） | `openai-compatible` | text / image | `SILICONFLOW_API_KEYS` | 含免费模型 |
+| **openrouter** | `openai-compatible` | text / image | `OPENROUTER_API_KEYS` | 含 `:free` 模型 |
+| **groq** | `openai-compatible` | text / image | `GROQ_API_KEYS` | 免费档 |
+| **gemini**（Google） | `openai-compatible` | text / image | `GEMINI_API_KEYS` | 兼容网关 |
+| **qianfan**（百度千帆） | `openai-compatible` | text / image | `QIANFAN_API_KEYS` | 兼容模式 |
+| **bailian**（阿里百炼） | `openai-compatible` | text / image | `DASHSCOPE_API_KEYS` | 兼容模式 |
+| **edge-tts** | 原生插件 | audio | 无需 | 微软免费 TTS |
+
+> 接入新 OpenAI 兼容服务只需在 `config.yaml` 加一段 `plugin: openai-compatible` + `base_url` + `api_key_env`，**无需改代码**（见 `config.example.yaml`）。
+
+#### 配置约定（snake_case 自动转 camelCase）
+
+`config.yaml` 里用 `base_url` / `api_key_env` / `default_models` / `extra.video_endpoint` 等 snake_case 写法，
+加载时会被**整体归一为 camelCase**，因此与代码读取（`config.extra.videoEndpoint` 等）一致，无需手写两种风格。
 
 ---
 
@@ -73,18 +96,20 @@ daimon/
 │   │   │   ├── plugin.ts       #   provider 插件基类 / Capability / 注册表
 │   │   │   ├── harness.ts      #   编排器
 │   │   │   ├── config.ts / types.ts / errors.ts / results.ts / http.ts
-│   │   │   └── providers/      #   openaiCompatible / agnes / edgeTts
+│   │   │   └── providers/      #   openaiCompatible / agnes / edgeTts / pollinations
 │   │   ├── tools/              # 能力二：工具
 │   │   ├── memory/             # 能力三：记忆
 │   │   └── session/            # 能力四：会话
 │   ├── cli.ts                  # CLI（list-providers / key-status / run / chat）
 │   └── index.ts                # 公共导出
 ├── examples/basicUsage.ts
-└── tests/                      # 25 个用例（node:test）
+└── tests/                      # 46 个用例（node:test）
     ├── keyManager.test.ts
     ├── registry.test.ts
     ├── agnes.test.ts
-    └── kernel.test.ts          # 内核装配 + 四大能力 + Agent
+    ├── kernel.test.ts          # 内核装配 + 四大能力 + Agent
+    ├── pollinations.test.ts
+    └── freeProviders.test.ts
 ```
 
 ---
@@ -96,6 +121,9 @@ npm install
 cp config.example.yaml config.yaml
 export AGNES_API_KEYS="key1,key2,key3"   # 多 key 逗号分隔，额度用完自动轮换
 ```
+
+> 💡 默认 provider 已设为 `pollinations`（完全免费、无需 API Key），因此**不填任何 key 也能直接 `chat`**。
+> 想用 agnes/智谱 等需 key 的服务时，再 `export` 对应环境变量并改 `default_provider` 即可。
 
 ### 作为 Agent 使用
 
@@ -213,11 +241,13 @@ npm test
 ```
 
 - `keyManager.test.ts`：轮转、额度耗尽、限流冷却、连续失败失效、持久化不泄露明文
-- `registry.test.ts`：provider 注册、能力路由、不支持模态报错
+- `registry.test.ts`：provider 注册、能力路由、不支持模态报错、`plugin` 字段复用
 - `agnes.test.ts`：文本/多模态/视频/音频解析、额度耗尽自动轮换（mock `fetch`）
 - `kernel.test.ts`：cordis 内核装配、tools/memory/session、Agent 对话与工具回灌
+- `pollinations.test.ts`：文本(/openai)、图像(GET)、音频(GET)、视频(POST)、错误（mock `fetch`）
+- `freeProviders.test.ts`：智谱/硅基流动/OpenRouter/Groq/Gemini/千帆/百炼 经 `openai-compatible` 基类接入，断言 host 与鉴权头
 
-当前状态：**25/25 全部通过**，`tsc --noEmit` 通过，`npm run build` 产出 `dist`。
+当前状态：**46/46 全部通过**，`tsc --noEmit` 通过，`npm run build` 产出 `dist`。
 
 ---
 
