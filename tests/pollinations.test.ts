@@ -77,14 +77,14 @@ test("视频经 POST video 端点返回 URL", async () => {
   let body: any;
   (globalThis as any).fetch = async (u: any, init: any) => {
     url = String(u);
-    body = JSON.parse(init.body);
+    body = init?.body ? JSON.parse(init.body) : {};
     return new Response(JSON.stringify({ url: "https://v.pollinations.ai/x.mp4" }), {
       status: 200,
       headers: { "content-type": "application/json" },
     });
   };
   const p = makePollinations();
-  const res: any = await p.generate("video", "explosion");
+  const res: any = await p.generate("video", "explosion", { videoMode: "post" });
   assert.equal(res.url, "https://v.pollinations.ai/x.mp4");
   assert.ok(url.includes("video.pollinations.ai/v1/video"));
   assert.equal(body.model, "veo2");
@@ -95,4 +95,40 @@ test("上游错误抛 ProviderError", async () => {
   (globalThis as any).fetch = async () => new Response("boom", { status: 500, headers: { "content-type": "text/plain" } });
   const p = makePollinations();
   await assert.rejects(() => p.generate("text", "x"), ProviderError);
+});
+
+test("视频 GET 直出 mp4 字节（默认 video_mode=get）", async () => {
+  let url = "";
+  (globalThis as any).fetch = async (u: any) => {
+    url = String(u);
+    return new Response(new Uint8Array([1, 2, 3, 4, 5]), {
+      status: 200,
+      headers: { "content-type": "video/mp4" },
+    });
+  };
+  const p = makePollinations();
+  const res: any = await p.generate("video", "a forest");
+  assert.ok(res.data instanceof Uint8Array);
+  assert.equal(res.data.length, 5);
+  assert.equal(res.format, "video/mp4");
+  assert.ok(url.includes("video.pollinations.ai/v1/video/mp4/"));
+  assert.ok(url.includes("model=veo2"));
+});
+
+test("视频 video_mode=post 走 POST 返回 URL", async () => {
+  let url = "";
+  let method = "";
+  (globalThis as any).fetch = async (u: any, init: any) => {
+    url = String(u);
+    method = init.method;
+    return new Response(JSON.stringify({ url: "https://v.pollinations.ai/out.mp4" }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+  const p = makePollinations();
+  const res: any = await p.generate("video", "city", { videoMode: "post" });
+  assert.equal(res.url, "https://v.pollinations.ai/out.mp4");
+  assert.equal(method, "POST");
+  assert.ok(url.includes("video.pollinations.ai/v1/video"));
 });
