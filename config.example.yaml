@@ -8,7 +8,7 @@
 #      npx tsx src/cli.ts --config config.yaml list-providers
 #      npx tsx src/cli.ts --config config.yaml chat --prompt "你好"
 
-default_provider: agnes
+default_provider: pollinations   # 零密钥首发即可用；需用 agnes/智谱等时改为对应 key 并 export
 log_level: INFO
 
 providers:
@@ -35,6 +35,104 @@ providers:
       video_poll_interval: 5
       # 音频：TTS
       audio_endpoint: "/audio/speech"
+
+  # ===== 以下均为 OpenAI 兼容的免费 / 免费额度服务：零代码复用 openai-compatible 基类 =====
+  # 通用接入说明：每个 provider 只需指定 plugin/base_url/api_key_env + 免费模型名。
+  # 多个 key 用英文逗号写入环境变量，额度耗尽自动轮换（见 README「多 Key 自动轮转」）。
+
+  # ---------------- 智谱 GLM（OpenAI 兼容，免费额度） ----------------
+  # 文档: https://open.bigmodel.cn/dev/howuse/compatibility
+  zhipu:
+    enabled: true
+    plugin: openai-compatible        # 零代码复用基类
+    base_url: "https://open.bigmodel.cn/api/paas/v4/"
+    api_key_env: ZHIPU_API_KEYS
+    keys: []
+    default_models:
+      text: glm-4-flash              # 免费模型
+      image: cogview-4
+
+  # ---------------- 硅基流动 SiliconFlow（OpenAI 兼容，含免费模型） ----------------
+  # 文档: https://docs.siliconflow.cn/
+  siliconflow:
+    enabled: true
+    plugin: openai-compatible
+    base_url: "https://api.siliconflow.cn/v1"
+    api_key_env: SILICONFLOW_API_KEYS
+    keys: []
+    default_models:
+      text: Qwen/Qwen2.5-7B-Instruct
+      image: SDXL-Lightning
+
+  # ---------------- OpenRouter（OpenAI 兼容，含 :free 模型） ----------------
+  # 文档: https://openrouter.ai/docs/quickstart
+  openrouter:
+    enabled: true
+    plugin: openai-compatible
+    base_url: "https://openrouter.ai/api/v1"
+    api_key_env: OPENROUTER_API_KEYS
+    keys: []
+    default_models:
+      text: meta-llama/llama-3.1-8b-instruct:free
+
+  # ---------------- Groq（OpenAI 兼容，免费档） ----------------
+  # 文档: https://console.groq.com/docs/openai
+  groq:
+    enabled: true
+    plugin: openai-compatible
+    base_url: "https://api.groq.com/openai/v1"
+    api_key_env: GROQ_API_KEYS
+    keys: []
+    default_models:
+      text: llama-3.1-8b-instant
+
+  # ---------------- Google Gemini（OpenAI 兼容网关） ----------------
+  # 文档: https://ai.google.dev/gemini-api/docs/openai
+  gemini:
+    enabled: true
+    plugin: openai-compatible
+    base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key_env: GEMINI_API_KEYS
+    keys: []
+    default_models:
+      text: gemini-2.0-flash
+
+  # ---------------- 百度智能云千帆（OpenAI 兼容） ----------------
+  # 文档: https://cloud.baidu.com/doc/WENXINWORKSHOP
+  qianfan:
+    enabled: true
+    plugin: openai-compatible
+    base_url: "https://qianfan.baidubce.com/v2"
+    api_key_env: QIANFAN_API_KEYS
+    keys: []
+    default_models:
+      text: ernie-4.0-8k-latest
+
+  # ---------------- 阿里云百炼 DashScope（OpenAI 兼容模式） ----------------
+  # 文档: https://help.aliyun.com/zh/model-studio
+  bailian:
+    enabled: true
+    plugin: openai-compatible
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    api_key_env: DASHSCOPE_API_KEYS
+    keys: []
+    default_models:
+      text: qwen-plus
+
+  # ---------------- Pollinations.AI（全模态、完全免费、无需 Key） ----------------
+  # 文档: https://github.com/pollinations/pollinations
+  # 无需 API Key，文本/图像/音频/视频全部公开可用；视频端点演进较快，必要时在 extra 调整。
+  pollinations:
+    enabled: true
+    plugin: pollinations
+    keys: []
+    default_models:
+      text: openai
+      image: flux
+      audio: openai-audio
+      video: veo2
+    extra:
+      video_endpoint: "https://video.pollinations.ai/v1/video"
 
   # ---------------- edge-tts（微软免费 TTS，无需 Key） ----------------
   edge-tts:
