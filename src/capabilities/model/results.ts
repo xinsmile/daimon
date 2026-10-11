@@ -12,6 +12,10 @@ export interface ImageResult {
   b64: string[];
   model: string;
   raw: unknown;
+  /** 二进制图片数据（如 Pollinations 直接返回字节时填充） */
+  data?: Uint8Array;
+  /** 内容类型，如 image/jpeg */
+  format?: string;
 }
 
 export interface AudioResult {
