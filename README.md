@@ -73,6 +73,8 @@
 
 > 接入新 OpenAI 兼容服务只需在 `config.yaml` 加一段 `plugin: openai-compatible` + `base_url` + `api_key_env`，**无需改代码**（见 `config.example.yaml`）。
 
+> 📋 各 provider 的**免费模型名 → 真实可用性核对表**（含 ⚠️ 需控制台确认项）见 [docs/FREE_MODELS.md](docs/FREE_MODELS.md)。
+
 #### 配置约定（snake_case 自动转 camelCase）
 
 `config.yaml` 里用 `base_url` / `api_key_env` / `default_models` / `extra.video_endpoint` 等 snake_case 写法，
@@ -103,13 +105,14 @@ daimon/
 │   ├── cli.ts                  # CLI（list-providers / key-status / run / chat）
 │   └── index.ts                # 公共导出
 ├── examples/basicUsage.ts
-└── tests/                      # 46 个用例（node:test）
+└── tests/                      # 49 个用例（node:test）
     ├── keyManager.test.ts
     ├── registry.test.ts
     ├── agnes.test.ts
     ├── kernel.test.ts          # 内核装配 + 四大能力 + Agent
-    ├── pollinations.test.ts
-    └── freeProviders.test.ts
+    ├── pollinations.test.ts     # 文本/图像/音频/视频(GET直出+POST)
+    ├── freeProviders.test.ts    # 7 个 OpenAI 兼容 provider
+    └── integration.pollinations.test.ts  # 内核→Agent→model→pollinations→session 全链路
 ```
 
 ---
@@ -244,10 +247,13 @@ npm test
 - `registry.test.ts`：provider 注册、能力路由、不支持模态报错、`plugin` 字段复用
 - `agnes.test.ts`：文本/多模态/视频/音频解析、额度耗尽自动轮换（mock `fetch`）
 - `kernel.test.ts`：cordis 内核装配、tools/memory/session、Agent 对话与工具回灌
-- `pollinations.test.ts`：文本(/openai)、图像(GET)、音频(GET)、视频(POST)、错误（mock `fetch`）
+- `pollinations.test.ts`：文本(/openai)、图像(GET)、音频(GET)、视频(GET 直出 mp4 + POST 返回 URL)、错误（mock `fetch`）
 - `freeProviders.test.ts`：智谱/硅基流动/OpenRouter/Groq/Gemini/千帆/百炼 经 `openai-compatible` 基类接入，断言 host 与鉴权头
+- `integration.pollinations.test.ts`：内核→Agent→model→pollinations→session 全链路（mock `fetch`，确定性 CI）
 
-当前状态：**46/46 全部通过**，`tsc --noEmit` 通过，`npm run build` 产出 `dist`。
+当前状态：**49/49 全部通过**，`tsc --noEmit` 通过，`npm run build` 产出 `dist`。
+
+> 真实端到端验证（联网）：`npx tsx src/cli.ts --config config.yaml chat --prompt "你好"` 已实测可经 Pollinations 返回文本回复。
 
 ---
 
