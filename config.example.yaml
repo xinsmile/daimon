@@ -132,6 +132,11 @@ providers:
       audio: openai-audio
       video: veo2
     extra:
+      # 视频两种模式（video_mode）：
+      #  - get（默认）：GET video_get_endpoint/{prompt} 直接返回 mp4 字节（镜像图像模式，最稳）
+      #  - post：POST video_endpoint 返回视频 URL（端点演进较快，按官方文档微调）
+      video_mode: get
+      video_get_endpoint: "https://video.pollinations.ai/v1/video/mp4"
       video_endpoint: "https://video.pollinations.ai/v1/video"
 
   # ---------------- edge-tts（微软免费 TTS，无需 Key） ----------------
