@@ -13,6 +13,7 @@
  */
 
 import { BasePlugin, Capability, register, type PluginCtor } from "../plugin.js";
+import type { ProviderConfig } from "../config.js";
 import type { Modality } from "../types.js";
 import type { ImageResult, TextResult } from "../results.js";
 
@@ -68,6 +69,12 @@ export class OpenAICompatiblePlugin extends BasePlugin {
   name = "openai-compatible";
   description = "OpenAI 兼容风格通用插件（文本/图像），可作为其它免费服务的基类";
   modalities = ["text", "image"] as Modality[];
+
+  constructor(config: ProviderConfig) {
+    super(config);
+    // 让每个命名 provider（智谱/硅基流动/...）显示自身身份，而不是统一 "openai-compatible"
+    this.name = config.name ?? "openai-compatible";
+  }
 
   protected makeCapability(modality: Modality): Capability | null {
     if (modality === "text") return new OpenAITextCapability(this);
