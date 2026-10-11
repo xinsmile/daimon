@@ -6,8 +6,9 @@
 import "./openaiCompatible.js";
 import "./agnes.js";
 import "./edgeTts.js";
+import "./pollinations.js";
 
-export const BUILTIN_PLUGINS = ["openai-compatible", "agnes", "edge-tts"];
+export const BUILTIN_PLUGINS = ["openai-compatible", "agnes", "edge-tts", "pollinations"];
 
 /** 内置插件已通过上面的副作用导入完成注册；此函数保持 API 对称。 */
 export function loadBuiltinPlugins(): void {
