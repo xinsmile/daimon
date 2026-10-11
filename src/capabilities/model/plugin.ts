@@ -42,7 +42,9 @@ export function listPlugins(): string[] {
 }
 
 export function buildPlugin(name: string, config: ProviderConfig): BasePlugin {
-  const Ctor = getPluginClass(name);
+  // 允许 provider 配置用 `plugin` 字段复用已注册类，而与自身 key 解耦，
+  // 例：智谱/硅基流动/OpenRouter 均可 `plugin: openai-compatible`。
+  const Ctor = getPluginClass(config.plugin ?? name);
   return new Ctor(config);
 }
 
