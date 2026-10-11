@@ -115,8 +115,32 @@ export class PollinationsVideoCapability extends Capability {
   modality: Modality = "video";
   async generate(prompt: string, opts: Record<string, any> = {}): Promise<VideoResult> {
     const model = this.plugin.modelFor("video", opts.model) || "veo2";
-    const endpoint =
-      this.plugin.config.extra?.videoEndpoint ?? `${VIDEO_BASE}/v1/video`;
+    // 两种模式（可在 config.extra.video_mode 切换）：
+    //  - "get"（默认推荐）：GET video.pollinations.ai/v1/video/mp4/{prompt} 直接返回 mp4 字节（镜像图像模式）
+    //  - "post"：POST 兼容端点，返回视频 URL（端点演进较快，用 extra.videoEndpoint 调整）
+    const mode = opts.videoMode ?? this.plugin.config.extra?.videoMode ?? "get";
+
+    if (mode === "get") {
+      const getBase =
+        this.plugin.config.extra?.videoGetEndpoint ?? `${VIDEO_BASE}/v1/video/mp4`;
+      const p = new URLSearchParams({ model });
+      if (opts.width) p.set("width", String(opts.width));
+      if (opts.height) p.set("height", String(opts.height));
+      if (opts.seed) p.set("seed", String(opts.seed));
+      const url = `${getBase}/${encodeURIComponent(prompt)}?${p.toString()}`;
+      const resp = await unchecked(url);
+      const buf = new Uint8Array(await resp.arrayBuffer());
+      const format = resp.headers.get("content-type") || "video/mp4";
+      let path: string | null = null;
+      if (opts.output) {
+        writeFileSync(opts.output, buf);
+        path = opts.output;
+      }
+      return { url: null, status: "succeeded", data: buf, format, model, path, raw: buf };
+    }
+
+    // 默认 POST（兼容端点，返回视频 URL）
+    const endpoint = this.plugin.config.extra?.videoEndpoint ?? `${VIDEO_BASE}/v1/video`;
     const payload: any = { ...opts };
     delete payload.model;
     payload.model = model;
