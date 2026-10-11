@@ -30,6 +30,12 @@ export interface VideoResult {
   status: string;
   model: string;
   raw: unknown;
+  /** 视频数据（GET 直出模式时填充） */
+  data?: Uint8Array;
+  /** 内容类型，如 video/mp4 */
+  format?: string;
+  /** 保存路径（GET 模式且指定 output 时） */
+  path?: string | null;
 }
 
 export interface MultimodalResult {
