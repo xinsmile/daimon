@@ -19,7 +19,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx src/cli.ts",
     "start": "tsx src/cli.ts",
-    "test": "node --import tsx --test tests/keyManager.test.ts tests/registry.test.ts tests/agnes.test.ts tests/kernel.test.ts",
+    "test": "node --import tsx --test tests/keyManager.test.ts tests/registry.test.ts tests/agnes.test.ts tests/kernel.test.ts tests/pollinations.test.ts tests/freeProviders.test.ts",
     "example": "tsx examples/basicUsage.ts"
   },
   "keywords": [
