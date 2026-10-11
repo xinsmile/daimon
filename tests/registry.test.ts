@@ -10,6 +10,19 @@ test("内置插件已注册", () => {
   assert.ok(names.includes("agnes"));
   assert.ok(names.includes("openai-compatible"));
   assert.ok(names.includes("edge-tts"));
+  assert.ok(names.includes("pollinations"));
+});
+
+test("plugin 字段可让命名 provider 复用基类并暴露自身身份", () => {
+  const cfg = new ProviderConfig({
+    name: "zhipu",
+    plugin: "openai-compatible",
+    baseUrl: "https://open.bigmodel.cn/api/paas/v4/",
+    keys: ["k"],
+  });
+  const p = buildPlugin("zhipu", cfg);
+  assert.equal(p.name, "zhipu");
+  assert.equal(p.getCapability("text").modality, "text");
 });
 
 test("构建 agnes 插件含全部模态", () => {
