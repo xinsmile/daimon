@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.workbuddy
+*.zip
+.tmp-*
+release-notes.md
+examples
+tests
+session.json
+memory.json
