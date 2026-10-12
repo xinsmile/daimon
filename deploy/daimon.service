@@ -1,0 +1,24 @@
+[Unit]
+Description=daimon personal Agent (HTTP API)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 部署路径（按需修改）：假设项目克隆/解压到 /opt/daimon 且已 npm install && npm run build
+WorkingDirectory=/opt/daimon
+# node 路径按实际调整（which node）；ExecStart 运行编译后的 CLI，启动 HTTP 服务
+ExecStart=/usr/bin/node dist/cli.js serve --host 0.0.0.0 --port 3000 --config config.yaml --data-dir /var/lib/daimon
+Restart=on-failure
+RestartSec=5
+# 从该文件读取密钥/令牌（每行 KEY=value，见 deploy/daimon.env.example）；文件可缺省
+EnvironmentFile=-/etc/daimon/daimon.env
+# 建议用非 root 用户运行；先创建：useradd -r -s /usr/sbin/nologin daimon
+User=daimon
+Group=daimon
+# 数据目录（记忆/会话落盘）
+StateDirectory=daimon
+LogsDirectory=daimon
+
+[Install]
+WantedBy=multi-user.target
