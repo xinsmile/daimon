@@ -16,6 +16,8 @@ import { listPlugins } from "./capabilities/model/plugin.js";
 import { HarnessConfig } from "./capabilities/model/config.js";
 import "./capabilities/model/providers/index.js";
 import { createKernel } from "./kernel.js";
+import { startServer } from "./server.js";
+import { startMcpServer } from "./mcpServer.js";
 import { createInterface } from "node:readline/promises";
 
 function buildHarness(needConfig: boolean, configPath?: string): Harness | null {
@@ -179,8 +181,38 @@ export async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
+  if (command === "serve") {
+    const { values } = parseArgs({
+      args: sub,
+      options: {
+        port: { type: "string" },
+        host: { type: "string" },
+        token: { type: "string" },
+        "data-dir": { type: "string" },
+      },
+      allowPositionals: true,
+    });
+    await startServer({
+      config,
+      port: values.port ? Number(values.port) : undefined,
+      host: values.host,
+      token: values.token,
+      dataDir: values["data-dir"],
+    });
+    return 0;
+  }
+  if (command === "mcp") {
+    const { values } = parseArgs({
+      args: sub,
+      options: { "data-dir": { type: "string" } },
+      allowPositionals: true,
+    });
+    await startMcpServer({ config, dataDir: values["data-dir"] });
+    return 0;
+  }
+
   console.error(
-    `未知或缺失子命令: ${command ?? "(无)"}\n用法: daimon [--config path] <list-providers|key-status|run|chat> ...`,
+    `未知或缺失子命令: ${command ?? "(无)"}\n用法: daimon [--config path] <list-providers|key-status|run|chat|serve|mcp> ...`,
   );
   return 2;
 }
@@ -190,5 +222,9 @@ import { fileURLToPath } from "node:url";
 import { realpathSync } from "node:fs";
 const __main = process.argv[1] ? realpathSync(process.argv[1]) : "";
 if (fileURLToPath(import.meta.url) === __main || process.argv[1]?.endsWith("cli.ts") || process.argv[1]?.endsWith("cli.js")) {
-  main(process.argv.slice(2)).then((code) => process.exit(code));
+  // 不强制 exit(0)：serve / mcp 需要保持事件循环存活（监听端口 / 读 stdin）。
+  // 仅对非零退出码（用法错误或运行异常）才主动退出。
+  main(process.argv.slice(2)).then((code) => {
+    if (code !== 0) process.exit(code);
+  });
 }
