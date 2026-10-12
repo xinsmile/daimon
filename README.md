@@ -102,10 +102,14 @@ daimon/
 │   │   ├── tools/              # 能力二：工具
 │   │   ├── memory/             # 能力三：记忆
 │   │   └── session/            # 能力四：会话
-│   ├── cli.ts                  # CLI（list-providers / key-status / run / chat）
+│   ├── cli.ts                  # CLI（list-providers / key-status / run / chat / serve / mcp）
+│   ├── server.ts               # HTTP API 服务（内置 http，零依赖）：/chat /run /health /providers
+│   ├── mcpServer.ts            # MCP stdio Server（JSON-RPC 2.0）：chat / run / list_providers
 │   └── index.ts                # 公共导出
 ├── examples/basicUsage.ts
-└── tests/                      # 49 个用例（node:test）
+├── Dockerfile / docker-compose.yml / .dockerignore   # 容器化部署
+├── deploy/                     # 部署资产：DEPLOY.md / daimon.service / ecosystem.config.js / daimon.env.example
+└── tests/                      # 51 个用例（node:test）
     ├── keyManager.test.ts
     ├── registry.test.ts
     ├── agnes.test.ts
@@ -250,10 +254,30 @@ npm test
 - `pollinations.test.ts`：文本(/openai)、图像(GET)、音频(GET)、视频(GET 直出 mp4 + POST 返回 URL)、错误（mock `fetch`）
 - `freeProviders.test.ts`：智谱/硅基流动/OpenRouter/Groq/Gemini/千帆/百炼 经 `openai-compatible` 基类接入，断言 host 与鉴权头
 - `integration.pollinations.test.ts`：内核→Agent→model→pollinations→session 全链路（mock `fetch`，确定性 CI）
+- `deploy.test.ts`：HTTP 服务（health/providers/鉴权 401/chat 回显/400/404）+ MCP stdio 握手（initialize/tools/list/list_providers）
 
-当前状态：**49/49 全部通过**，`tsc --noEmit` 通过，`npm run build` 产出 `dist`。
+当前状态：**51/51 全部通过**，`tsc --noEmit` 通过，`npm run build` 产出 `dist`。
 
 > 真实端到端验证（联网）：`npx tsx src/cli.ts --config config.yaml chat --prompt "你好"` 已实测可经 Pollinations 返回文本回复。
+
+---
+
+## 🚢 部署
+
+daimon 可作为 **HTTP API 服务**（`serve`）或 **MCP stdio Server**（`mcp`）常驻部署，支持源码 / Docker / systemd / pm2 四种形态。详见 **[deploy/DEPLOY.md](deploy/DEPLOY.md)**。
+
+```bash
+# HTTP 服务（默认 0.0.0.0:3000；设 DAEMON_API_TOKEN 后开启鉴权）
+node dist/cli.js serve --config config.yaml --data-dir ./data
+
+# Docker 一键部署
+docker compose up -d --build
+
+# MCP（供 Claude 等客户端调用）
+node dist/cli.js --config config.yaml mcp
+```
+
+HTTP 接口：`GET /health`、`GET /providers`、`POST /chat`（`{prompt,provider?}`）、`POST /run`（`{provider,modality,prompt,...}`）。
 
 ---
 
