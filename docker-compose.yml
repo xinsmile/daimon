@@ -1,0 +1,30 @@
+services:
+  daimon:
+    build: .
+    image: daimon:0.1.0
+    container_name: daimon
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # HTTP 鉴权（设置后 /chat 与 /run 需带 Authorization: Bearer <token>）
+      - DAEMON_API_TOKEN=${DAEMON_API_TOKEN:-}
+      # 各 provider 密钥（按需填写，逗号分隔可多个，自动轮转）；不填则用默认 pollinations 零密钥
+      - AGNES_API_KEYS=${AGNES_API_KEYS:-}
+      - ZHIPU_API_KEYS=${ZHIPU_API_KEYS:-}
+      - SILICONFLOW_API_KEYS=${SILICONFLOW_API_KEYS:-}
+      - OPENROUTER_API_KEYS=${OPENROUTER_API_KEYS:-}
+      - GROQ_API_KEYS=${GROQ_API_KEYS:-}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS:-}
+      - QIANFAN_API_KEYS=${QIANFAN_API_KEYS:-}
+      - DASHSCOPE_API_KEYS=${DASHSCOPE_API_KEYS:-}
+    volumes:
+      # 记忆 / 会话持久化
+      - daimon-data:/data
+      # 需要自定义配置时，取消下一行并放入你的 config.yaml
+      # - ./config.yaml:/app/config.yaml:ro
+    # 改端口/主机可覆盖启动参数：
+    # command: ["serve","--host","0.0.0.0","--port","8080","--config","config.yaml","--data-dir","/data"]
+
+volumes:
+  daimon-data:
